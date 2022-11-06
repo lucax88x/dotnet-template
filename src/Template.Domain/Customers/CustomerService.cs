@@ -1,23 +1,18 @@
-﻿using Template.Domain.Services;
+﻿using System.Collections.Immutable;
+using Template.Domain.Services;
 
 namespace Template.Domain.Customers;
 
-public interface ICustomers
-{
+public interface ICustomers {
     Task<Customer> GetAsync(int id);
-    Task<List<Customer>> GetAsync();
+    Task<ImmutableList<Customer>> GetAsync();
     Task<Customer> Create(Customer customer);
 }
 
-public class Customers : ICustomers
-{
-    public async Task<Customer> GetAsync(int id) => throw new NotImplementedException();
+public class Customers : ICustomers {
+    public Task<Customer> GetAsync(int id) => throw new NotImplementedException();
 
-    public async Task<List<Customer>> GetAsync() =>
-        new List<Customer>
-        {
-            new ()
-        };
+    public Task<ImmutableList<Customer>> GetAsync() => Task.FromResult(Array.Empty<Customer>().ToImmutableList());
 
-    public async Task<Customer> Create(Customer customer) => throw new NotImplementedException();
+    public Task<Customer> Create(Customer customer) => throw new NotImplementedException();
 }

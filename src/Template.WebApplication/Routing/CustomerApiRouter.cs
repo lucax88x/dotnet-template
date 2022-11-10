@@ -37,7 +37,7 @@ public static class CustomerApiRouter
                 .Map(CustomerMapper.ToEntity)
                 .Tee(customers.Create);
             
-            return Results.Created($"/{customer.Id}", customer);
+            return Results.Created(new Uri($"/{customer.Id}"), customer);
         };
     
     private static readonly Delegate GetByIdAsync =

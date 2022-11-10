@@ -1,10 +1,9 @@
 #!/bin/bash
 
 PREFIX=Template
-AUTOFAC_VERSION=6.0.0
-NSUBSTITUTE_VERSION=4.2.2
-FLUENT_ASSERTIONS_VERSION=5.10.3
-DOTNET_VERSION=net6.0
+NSUBSTITUTE_VERSION=4.4.0
+FLUENT_ASSERTIONS_VERSION=6.8.0
+DOTNET_VERSION=net7.0
 SOLUTION_NAME=Template-Solution
 
 if [ -z "$1" ]; then
@@ -19,14 +18,11 @@ dotnet new classlib \
 	--langVersion latest \
 	-o src/"$PROJECT_FULL_NAME"
 
-dotnet add src/"$PROJECT_FULL_NAME" package Autofac -v $AUTOFAC_VERSION
-
 dotnet new xunit \
 	-n "$PROJECT_FULL_NAME".Tests \
 	-f $DOTNET_VERSION \
 	-o src/"$PROJECT_FULL_NAME".Tests
 
-dotnet add src/"$PROJECT_FULL_NAME".Tests package Autofac -v $AUTOFAC_VERSION
 dotnet add src/"$PROJECT_FULL_NAME".Tests package NSubstitute -v $NSUBSTITUTE_VERSION
 dotnet add src/"$PROJECT_FULL_NAME".Tests package FluentAssertions -v $FLUENT_ASSERTIONS_VERSION
 

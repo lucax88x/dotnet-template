@@ -8,7 +8,7 @@ public record CustomerModel(
     string LastName,
     string CompanyName,
     string EmailAddress,
-    ICollection<string> PhoneNumbers
+    IReadOnlyCollection<string> PhoneNumbers
 )
 {
     public Customer ToEntity()

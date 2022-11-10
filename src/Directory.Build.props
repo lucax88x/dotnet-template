@@ -16,6 +16,7 @@
      <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
      <AnalysisMode>All</AnalysisMode>
      <EnableNETAnalyzers>true</EnableNETAnalyzers>
+     <IncludeOpenAPIAnalyzers>true</IncludeOpenAPIAnalyzers>
   </PropertyGroup>
 
 </Project>

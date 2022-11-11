@@ -6,7 +6,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Domain", "Domain", "{C71F0E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{EB3211A9-CD41-47D6-A480-3C76B18B69A3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Template.WebApplication", "Template.WebApplication\Template.WebApplication.csproj", "{E49D090F-798B-4C41-9162-EBC03026E1E4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Template.Web.Application", "Template.Web.Application\Template.Web.Application.csproj", "{E49D090F-798B-4C41-9162-EBC03026E1E4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Template.Domain", "Template.Domain\Template.Domain.csproj", "{5BC2769D-2AE1-4A81-8862-F18511618394}"
 EndProject
@@ -24,7 +24,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Domain", "Domain", "{695A75
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{259AB945-6328-4B57-A741-B46ABF78DB3C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Template.WebApplication.Tests", "Template.WebApplication.Tests\Template.WebApplication.Tests.csproj", "{DA5A3A7A-2E04-4DF5-848C-841F657E58A3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Template.Web.Application.Tests", "Template.Web.Application.Tests\Template.Web.Application.Tests.csproj", "{DA5A3A7A-2E04-4DF5-848C-841F657E58A3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Template.Domain.Tests", "Template.Domain.Tests\Template.Domain.Tests.csproj", "{5DA2EC48-6871-4499-9A57-A08587B64875}"
 EndProject

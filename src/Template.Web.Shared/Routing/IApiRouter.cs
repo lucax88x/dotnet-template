@@ -1,4 +1,4 @@
-﻿namespace Template.WebApplication.Routing;
+﻿namespace Template.Web.Shared.Routing;
 
 public interface IApiRouter
 {

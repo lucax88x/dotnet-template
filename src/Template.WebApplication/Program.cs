@@ -1,4 +1,6 @@
 using FluentValidation;
+using Template.Web.Shared;
+using Template.Web.Shared.Extensions;
 using Template.WebApplication;
 using Template.WebApplication.Routing;
 

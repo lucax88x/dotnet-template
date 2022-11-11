@@ -10,16 +10,14 @@
 
     <ItemGroup>
         <PackageReference Include="FluentValidation" Version="11.3.0" />
-        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.3.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="7.0.0" />
-        <PackageReference Include="Microsoft.Identity.Web" Version="1.25.5" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.2.2" />
+        <PackageReference Include="Microsoft.Identity.Web" Version="1.16.0" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Functional\Functional.csproj" />
       <ProjectReference Include="..\Template.Domain\Template.Domain.csproj" />
+      <ProjectReference Include="..\Template.Web.Shared\Template.Web.Shared.csproj" />
     </ItemGroup>
 
 </Project>

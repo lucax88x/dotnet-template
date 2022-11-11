@@ -1,4 +1,4 @@
-﻿using Template.Domain.Services;
+﻿using Template.Domain.Customers;
 
 namespace Template.WebApplication.Models;
 

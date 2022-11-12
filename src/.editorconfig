@@ -143,6 +143,9 @@ resharper_csharp_wrap_parameters_style = chop_if_long
 # this is not needed with nullable
 dotnet_diagnostic.CA1062.severity = none
 
+# no need to mark assemblies
+dotnet_diagnostic.CA1014.severity = none
+
 [Functional/*.cs]
 dotnet_diagnostic.CA2008.severity = none
 dotnet_diagnostic.CA1849.severity = none

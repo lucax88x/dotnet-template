@@ -6,7 +6,6 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>aspnet-Template.WebApplication-645EE480-A31A-4D6C-B4A6-0B5FFB8DB731</UserSecretsId>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-        <RootNamespace>Template.WebApplication</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,7 +17,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Functional\Functional.csproj" />
       <ProjectReference Include="..\Template.Domain\Template.Domain.csproj" />
-      <ProjectReference Include="..\Template.Web.Shared\Template.Web.Shared.csproj" />
+      <ProjectReference Include="..\Template.Web.Common\Template.Web.Common.csproj" />
     </ItemGroup>
 
 </Project>

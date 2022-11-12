@@ -1,18 +1,21 @@
 using FluentValidation;
-using Template.Web.Shared;
-using Template.Web.Shared.Extensions;
-using Template.WebApplication;
-using Template.WebApplication.Routing;
+using Template.Web.Application;
+using Template.Web.Application.Routing;
+using Template.Web.Common.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// builder.Services
-//     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-//     .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+builder.Services.AddOptions<Config>()
+    .Bind(builder.Configuration.GetSection(Config.Key))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
-builder.SetLogging()
+builder
+    // .AddTemplateAuth()
+    .AddTemplateLogging()
     .RegisterActions()
-    .SetApiExplorerAndSwagger();
+    .AddSwaggerWhenDevelopment()
+    .AddApiExplorer();
 
 builder.Services
     .AddValidatorsFromAssemblyContaining<Program>();
@@ -20,8 +23,8 @@ builder.Services
 var app = builder.Build();
 app.UseHttpsRedirection();
 
-app.SetSwaggerWhenDevelopment()
-    // .SetAuth()
-    .SetRouting()
+app.UseSwaggerWhenDevelopment()
+    // .UseTemplateAuth()
+    .UseTemplateRouting()
     .MapCustomerEndpoints()
     .Run();

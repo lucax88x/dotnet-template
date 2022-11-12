@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace Template.WebApplication.Models;
+namespace Template.Web.Application.Models;
 
 public class CustomerValidator : AbstractValidator<CustomerModel>
 {

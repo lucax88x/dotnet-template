@@ -1,4 +1,4 @@
-namespace Template.WebApplication.Routing;
+namespace Template.Web.Application.Routing;
 
 internal class ErrorResponse
 {

@@ -2,13 +2,13 @@
 
 namespace Template.Domain.Customers;
 
-public interface ICustomers {
+public interface ICustomerService {
     Task<Customer> GetAsync(int id);
     Task<ImmutableList<Customer>> GetAsync();
     Task<Customer> Create(Customer customer);
 }
 
-public class Customers : ICustomers {
+public class CustomerServiceService : ICustomerService {
     public Task<Customer> GetAsync(int id) => throw new NotImplementedException();
 
     public Task<ImmutableList<Customer>> GetAsync() => Task.FromResult(Array.Empty<Customer>().ToImmutableList());

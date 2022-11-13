@@ -8,8 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder
     .AddAndValidateOptions<SeqConfig>(SeqConfig.Section)
+    .AddAndValidateOptions<JaegerConfig>(JaegerConfig.Section)
     // .AddTemplateAuth()
     .AddTemplateLogging()
+    .AddTemplateTracing()
     .RegisterActions()
     .AddSwaggerWhenDevelopment();
 

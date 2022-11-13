@@ -1,4 +1,6 @@
 ﻿using System.Collections.Immutable;
+using System.Diagnostics;
+using Template.Common;
 
 namespace Template.Domain.Customers;
 
@@ -8,10 +10,17 @@ public interface ICustomerService {
     Task<Customer> Create(Customer customer);
 }
 
-public class CustomerServiceService : ICustomerService {
+public class CustomerService : ICustomerService {
     public Task<Customer> GetAsync(int id) => throw new NotImplementedException();
 
-    public Task<ImmutableList<Customer>> GetAsync() => Task.FromResult(Array.Empty<Customer>().ToImmutableList());
+    public Task<ImmutableList<Customer>> GetAsync()
+    {
+        using var activity = Tracing.Source.StartActivity();
+
+        return Task.FromResult(
+            new List<Customer> { new() { Id = 1, Name = "some name" }, new() { Id = 2, Name = "another name" } }.ToImmutableList()
+        );
+    }
 
     public Task<Customer> Create(Customer customer) => throw new NotImplementedException();
 }

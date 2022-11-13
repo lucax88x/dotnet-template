@@ -1,5 +1,6 @@
 using Serilog;
 using Serilog.Sinks.FastConsole;
+using Template.Common;
 using Template.Web.Common.Configs;
 
 namespace Template.Web.Common;
@@ -22,6 +23,7 @@ public static class LoggerConfigurationBuilder {
 
         loggerConfiguration
             .Enrich.FromLogContext()
+            .Enrich.WithProperty("source", SourceAndVersion.GetSourceName())
             .WriteTo.FastConsole();
 
         if (options.SeqConfig is not null)

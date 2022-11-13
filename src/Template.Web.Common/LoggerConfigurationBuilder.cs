@@ -1,5 +1,6 @@
 using Serilog;
 using Serilog.Sinks.FastConsole;
+using Template.Web.Common.Configs;
 
 namespace Template.Web.Common;
 
@@ -12,7 +13,10 @@ public static class LoggerConfigurationBuilder {
             .WriteTo.FastConsole();
     }
 
-    public static LoggerConfiguration BuildForApplication(LoggerConfiguration? loggerConfiguration = null)
+    public static LoggerConfiguration BuildForApplication(
+            LogOptions options,
+            LoggerConfiguration? loggerConfiguration = null
+        )
     {
         loggerConfiguration ??= new LoggerConfiguration();
 
@@ -20,11 +24,15 @@ public static class LoggerConfigurationBuilder {
             .Enrich.FromLogContext()
             .WriteTo.FastConsole();
 
-        // var configuration = services.GetRequiredService<IConfiguration>();
-        // var seqHost = configuration["Seq:Host"] ?? "localhost";
-        //
-        // loggerConfiguration.WriteTo.Seq($"http://{seqHost}:5341");
+        if (options.SeqConfig is not null)
+        {
+            loggerConfiguration.WriteTo.Seq(options.SeqConfig.Host);
+        }
 
         return loggerConfiguration;
     }
+}
+
+public class LogOptions {
+    public SeqConfig? SeqConfig { get; init; }
 }

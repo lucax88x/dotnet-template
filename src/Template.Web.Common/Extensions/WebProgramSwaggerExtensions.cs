@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Template.Web.Common.Extensions;
 
@@ -11,16 +12,8 @@ public static class WebProgramSwaggerExtensions {
 
         builder
             .Services
+            .AddEndpointsApiExplorer()
             .AddSwaggerGen();
-
-        return builder;
-    }
-
-    public static WebApplicationBuilder AddApiExplorer(this WebApplicationBuilder builder)
-    {
-        builder
-            .Services
-            .AddEndpointsApiExplorer();
 
         return builder;
     }
@@ -31,6 +24,8 @@ public static class WebProgramSwaggerExtensions {
 
         app.UseSwagger();
         app.UseSwaggerUI();
+
+        app.Logger.LogInformation("Swagger available at /swagger");
 
         return app;
     }

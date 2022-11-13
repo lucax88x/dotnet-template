@@ -1,23 +1,22 @@
 using FluentValidation;
 using Template.Web.Application;
 using Template.Web.Application.Routing;
+using Template.Web.Common.Configs;
 using Template.Web.Common.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOptions<Config>()
-    .Bind(builder.Configuration.GetSection(Config.Key))
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
-
 builder
+    .AddAndValidateOptions<SeqConfig>(SeqConfig.Section)
     // .AddTemplateAuth()
     .AddTemplateLogging()
     .RegisterActions()
-    .AddSwaggerWhenDevelopment()
-    .AddApiExplorer();
+    .AddSwaggerWhenDevelopment();
+
+// TODO: Problem details
 
 builder.Services
+    .AddEndpointsApiExplorer()
     .AddValidatorsFromAssemblyContaining<Program>();
 
 var app = builder.Build();

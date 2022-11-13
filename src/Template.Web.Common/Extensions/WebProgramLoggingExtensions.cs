@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Serilog;
+using Template.Web.Common.Configs;
 
 namespace Template.Web.Common.Extensions;
 
@@ -21,9 +24,11 @@ public static class WebProgramLoggingExtensions {
             .CreateBootstrapLogger();
 
         hostBuilder.UseSerilog(
-            (context, services, loggerConfiguration) =>
+            (_, services, loggerConfiguration) =>
             {
-                LoggerConfigurationBuilder.BuildForApplication(loggerConfiguration);
+                var seqConfig = services.GetRequiredService<IOptions<SeqConfig>>();
+
+                LoggerConfigurationBuilder.BuildForApplication(new LogOptions { SeqConfig = seqConfig.Value }, loggerConfiguration);
             }
         );
 

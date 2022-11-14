@@ -9,7 +9,6 @@
   "author": "adesso-ti-shore",
   "license": "ISC",
   "scripts": {
-    "generate-project": "sh ./scripts/generate-project.sh",
     "test:unit": "dotnet test src/Template-Solution.sln --filter Category\\!=Integration --logger trx",
     "test:integration": "dotnet test src/Template-Solution.sln --filter Category=Integration --logger trx",
     "restore": "dotnet restore src/Template-Solution.sln",

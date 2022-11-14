@@ -1,0 +1,22 @@
+{
+  "name": "dotnet-template",
+  "version": "1.0.0",
+  "description": "template for dotnet projects",
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@brn-vm072.adesso.local:9022/ti-shore-dotnet/dotnet-template.git"
+  },
+  "author": "adesso-ti-shore",
+  "license": "ISC",
+  "scripts": {
+    "test:unit": "dotnet test src/Template-Solution.sln --filter Category\\!=Integration --logger trx",
+    "test:integration": "dotnet test src/Template-Solution.sln --filter Category=Integration --logger trx",
+    "restore": "dotnet restore src/Template-Solution.sln",
+    "build": "dotnet build src/Template-Solution.sln --no-restore",
+    "start": "dotnet watch src/Template-Solution.sln --no-restore",
+    "docker:up": "docker-compose -f docker-compose.yml up -d",
+    "docker:down": "docker-compose -f docker-compose.yml down",
+    "docker:logs": "docker-compose -f docker-compose.yml logs",
+    "docker:logs:watch": "docker-compose -f docker-compose.yml logs -f -t"
+  }
+}

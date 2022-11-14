@@ -7,7 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Template.Common.Tracing\Template.Common.Tracing.csproj" />
       <ProjectReference Include="..\Template.Common\Template.Common.csproj" />
     </ItemGroup>
 

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Template.Common;
+namespace Template.Common.Tracing;
 
 public static class Tracing {
     public static readonly ActivitySource Source =

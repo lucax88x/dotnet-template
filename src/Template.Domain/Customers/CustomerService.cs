@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics;
 using Template.Common;
+using Template.Common.Tracing;
 
 namespace Template.Domain.Customers;
 

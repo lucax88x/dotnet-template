@@ -4,6 +4,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
+using Serilog.Sinks.FastConsole;
+using Template.Common;
 using Template.Web.Common.Configs;
 
 namespace Template.Web.Common.Extensions;
@@ -19,16 +21,24 @@ public static class WebProgramLoggingExtensions {
 
     public static IHostBuilder UseTemplateLogging(this IHostBuilder hostBuilder)
     {
-        Log.Logger = LoggerConfigurationBuilder
-            .BuildForHost()
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.FastConsole()
             .CreateBootstrapLogger();
 
         hostBuilder.UseSerilog(
             (_, services, loggerConfiguration) =>
             {
-                var seqConfig = services.GetRequiredService<IOptions<SeqConfig>>();
+                var seqConfig = services.GetService<IOptions<SeqConfig>>();
 
-                LoggerConfigurationBuilder.BuildForApplication(new LogOptions { SeqConfig = seqConfig.Value }, loggerConfiguration);
+                loggerConfiguration
+                    .Enrich.FromLogContext()
+                    .Enrich.WithProperty("source", SourceAndVersion.SourceName)
+                    .WriteTo.FastConsole();
+
+                if (seqConfig is not null)
+                {
+                    loggerConfiguration.WriteTo.Seq(seqConfig.Value.Host);
+                }
             }
         );
 

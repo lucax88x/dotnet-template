@@ -23,7 +23,7 @@ public static class LoggerConfigurationBuilder {
 
         loggerConfiguration
             .Enrich.FromLogContext()
-            .Enrich.WithProperty("source", SourceAndVersion.GetSourceName())
+            .Enrich.WithProperty("source", SourceAndVersion.SourceName)
             .WriteTo.FastConsole();
 
         if (options.SeqConfig is not null)

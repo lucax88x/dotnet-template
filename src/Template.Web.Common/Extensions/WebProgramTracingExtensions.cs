@@ -19,8 +19,8 @@ public static class WebProgramTracingExtensions {
                 .AddOpenTelemetryTracing(
                     builder =>
                     {
-                        var sourceName = SourceAndVersion.GetSourceName();
-                        var version = SourceAndVersion.GetVersion();
+                        var sourceName = SourceAndVersion.SourceName;
+                        var version = SourceAndVersion.Version;
 
                         builder
                             .AddSource(sourceName)

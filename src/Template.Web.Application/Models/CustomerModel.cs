@@ -1,6 +1,6 @@
 ﻿using Template.Domain.Customers;
 
-namespace Template.WebApplication.Models;
+namespace Template.Web.Application.Models;
 
 public record CustomerModel(
     int CustomerId,

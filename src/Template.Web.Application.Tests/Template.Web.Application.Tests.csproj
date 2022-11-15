@@ -6,6 +6,8 @@
         <Nullable>enable</Nullable>
 
         <IsPackable>false</IsPackable>
+
+        <RootNamespace>Template.WebApplication.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

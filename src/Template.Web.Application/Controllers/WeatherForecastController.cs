@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Identity.Web.Resource;
 
-namespace Template.WebApplication.Controllers;
+namespace Template.Web.Application.Controllers;
 
 [Authorize]
 [ApiController]

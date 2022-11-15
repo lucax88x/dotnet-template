@@ -1,9 +1,9 @@
-﻿using Template.Domain.Customers;
-using Template.WebApplication.Models;
+﻿using Functional;
+using Template.Domain.Customers;
+using Template.Web.Application.Models;
 
-namespace Template.WebApplication.Routing;
+namespace Template.Web.Application.Routing;
 using WebAppBuilder = Microsoft.AspNetCore.Builder;
-using Functional;
 
 public static class CustomerApiRouter
 {
@@ -17,10 +17,10 @@ public static class CustomerApiRouter
             .Tee(_ => _.MapPost(Route, PostAsync).DescribePost());
 
     private static readonly Delegate GetAsync =
-        (ICustomers customers) => customers.GetAsync();
+        (ICustomerService customers) => customers.GetAsync();
 
     private static readonly Delegate PostAsync = 
-        async (ICustomers customers, CustomerModel model, CustomerValidator validator) =>
+        async (ICustomerService customers, CustomerModel model, CustomerValidator validator) =>
         {
             // TODO: Consider use of Decorator pattern to make an onion 
             // consisting on three steps:
@@ -40,7 +40,7 @@ public static class CustomerApiRouter
         };
     
     private static readonly Delegate GetByIdAsync =
-        (ICustomers customers, int id) => customers.GetAsync(id);
+        (ICustomerService customers, int id) => customers.GetAsync(id);
 
     private static RouteHandlerBuilder DescribeGet(this RouteHandlerBuilder route) =>
         route.Produces(StatusCodes.Status200OK, typeof(Customer))

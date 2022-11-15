@@ -1,4 +1,4 @@
-namespace Template.WebApplication;
+namespace Template.Web.Application;
 
 public class WeatherForecast
 {

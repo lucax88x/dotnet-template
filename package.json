@@ -14,9 +14,9 @@
     "restore": "dotnet restore src/Template-Solution.sln",
     "build": "dotnet build src/Template-Solution.sln --no-restore",
     "start": "dotnet watch src/Template-Solution.sln --no-restore",
-    "docker:up": "docker-compose -f docker-compose.yml up -d",
-    "docker:down": "docker-compose -f docker-compose.yml down",
-    "docker:logs": "docker-compose -f docker-compose.yml logs",
-    "docker:logs:watch": "docker-compose -f docker-compose.yml logs -f -t"
+    "docker:up": "docker compose -f docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker-compose.yml down",
+    "docker:logs": "docker compose -f docker-compose.yml logs",
+    "docker:logs:watch": "docker compose -f docker-compose.yml logs -f -t"
   }
 }

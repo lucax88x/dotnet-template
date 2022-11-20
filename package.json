@@ -18,5 +18,10 @@
     "docker:down": "docker compose -f docker-compose.yml down",
     "docker:logs": "docker compose -f docker-compose.yml logs",
     "docker:logs:watch": "docker compose -f docker-compose.yml logs -f -t"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.3.18",
+    "@tsconfig/node16-strictest-esm": "^1.0.3",
+    "zx": "^7.1.1"
   }
 }

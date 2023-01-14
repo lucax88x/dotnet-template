@@ -1,7 +1,9 @@
 #!/usr/bin/env npx --package=ts-node -- ts-node-esm --swc
-import "zx/globals";
 
+import "zx/globals";
 import { spinner } from "zx/experimental";
+
+await $`cat package.json | grep name`;
 
 try {
   await $`exit 1`;

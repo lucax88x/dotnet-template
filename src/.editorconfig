@@ -21,8 +21,7 @@ dotnet_naming_rule.private_constants_rule.import_to_resharper = as_predefined
 dotnet_naming_rule.private_constants_rule.severity = warning
 dotnet_naming_rule.private_constants_rule.style = upper_camel_case_style
 dotnet_naming_rule.private_constants_rule.symbols = private_constants_symbols
-dotnet_naming_rule.private_instance_fields_rule.import_to_resharper = as_predefined
-dotnet_naming_rule.private_instance_fields_rule.severity = warning
+dotnet_naming_rule.private_instance_fields_rule.import_to_resharper = as_predefined dotnet_naming_rule.private_instance_fields_rule.severity = warning
 dotnet_naming_rule.private_instance_fields_rule.style = upper_camel_case_style
 dotnet_naming_rule.private_instance_fields_rule.symbols = private_instance_fields_symbols
 dotnet_naming_rule.private_static_fields_rule.import_to_resharper = as_predefined
@@ -156,7 +155,11 @@ dotnet_naming_symbols.private_fields.applicable_accessibilities = private
 dotnet_naming_style.prefix_underscore.capitalization = camel_case
 dotnet_naming_style.prefix_underscore.required_prefix = _
 
+[Program.cs]
+dotnet_diagnostic.CA1852.severity = none
+
 [Functional/*.cs]
 dotnet_diagnostic.CA2008.severity = none
 dotnet_diagnostic.CA1849.severity = none
 dotnet_diagnostic.CA2007.severity = none
+

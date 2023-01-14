@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Template.Common;
 using Template.Common.Tracing;
+using Trace = Template.Common.Tracing.Trace;
 
 namespace Template.Domain.Customers;
 
@@ -16,7 +17,7 @@ public class CustomerService : ICustomerService {
 
     public Task<ImmutableList<Customer>> GetAsync()
     {
-        using var activity = Tracing.Source.StartActivity();
+        using var activity = Trace.Source.StartActivity();
 
         return Task.FromResult(
             new List<Customer> { new() { Id = 1, Name = "some name" }, new() { Id = 2, Name = "another name" } }.ToImmutableList()

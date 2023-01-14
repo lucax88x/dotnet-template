@@ -25,7 +25,8 @@ public static class WebProgramSwaggerExtensions {
         app.UseSwagger();
         app.UseSwaggerUI();
 
-        app.Logger.LogInformation("Swagger available at /swagger");
+        // use logger message etc
+        // app.Logger.LogInformation("Swagger available at /swagger");
 
         return app;
     }

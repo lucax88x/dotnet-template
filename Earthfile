@@ -22,10 +22,17 @@ build:
   RUN dotnet build --no-restore src/Template-Solution.sln
 
 test:
+  COPY scripts/test.sh .
+
   FROM +build
   COPY src src
 
-  RUN dotnet test --no-restore --no-build src/Template-Solution.sln
+  RUN test.sh
+
+  RUN mkdir -p test-results
+  RUN cp src/**/*.trx test-results
+
+  SAVE ARTIFACT test-results AS LOCAL test-results
 
 publish-web-application:
   FROM +build

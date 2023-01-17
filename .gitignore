@@ -36,3 +36,10 @@ Desktop.ini
 
 TestResults/
 node_modules/
+
+
+# dagger
+*.test
+*.out
+go.work
+build

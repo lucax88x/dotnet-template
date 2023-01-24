@@ -4,24 +4,32 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
-	"path/filepath"
-
+	"log"
 	"os"
+	"path"
+	"path/filepath"
+	"time"
 
 	"dagger.io/dagger"
-	"github.com/fatih/color"
 )
 
 func main() {
 	var task string
+	var isDebug = false
 
 	if len(os.Args) >= 2 {
 		task = os.Args[1]
+		lastArg := os.Args[len(os.Args)-1]
+
+		if lastArg == "--debug" {
+			isDebug = true
+		}
+
 	} else {
 		task = "ci"
 	}
 
-	log_info("running task %s", task)
+	log.Printf("running task %s", task)
 
 	var task_error error
 	ctx := context.Background()
@@ -38,69 +46,53 @@ func main() {
 	switch task {
 	case "ci":
 		{
-			task_error = build(ctx, client)
+			task_error = ci(ctx, client, isDebug)
 		}
 	default:
 		{
-			log_error("unrecognized task")
+			log.Printf("unrecognized task")
 		}
 	}
 
 	if task_error != nil {
-		log_error("%e", task_error)
+		log.Printf("%e", task_error)
 	}
 }
 
-const sdk_docker_image = "mcr.microsoft.com/dotnet/sdk:7.0"
-const solution = "src/Template-Solution.sln"
+const dotnetSdkDockerImage = "mcr.microsoft.com/dotnet/sdk:7.0"
+const outputDirectory = "build/"
 
-func build(ctx context.Context, client *dagger.Client) error {
-	log_info("building")
+func ci(ctx context.Context, client *dagger.Client, isDebug bool) error {
+	now := time.Now()
 
-	// host_src := client.
-	// 	Host().
-	// 	Directory("./src")
+	log.Printf("CI")
 
 	outputs := client.
-		Directory()
+		Directory().
+		WithoutDirectory("node_modules").
+		WithoutDirectory("bin").
+		WithoutDirectory("obj")
 
 	sdk := client.
 		Container().
-		From(sdk_docker_image)
+		From(dotnetSdkDockerImage)
 
-	projects_dir, err := copyProjects(outputs)
+	if isDebug {
+		log.Printf("debug mode")
 
-	if err != nil {
-		return err
+		sdk = sdk.
+			WithEnvVariable("BURST_CACHE", now.String())
 	}
 
-	sdk = sdk.
-		WithMountedDirectory("/src", projects_dir).
-		WithWorkdir("/src")
-
-	sdk = sdk.
-		WithExec([]string{"ls"})
-
-	sdk = sdk.
-		WithExec([]string{"ls", "src"})
-
-	sdk = sdk.
-		WithExec([]string{"dotnet", "restore", solution})
-
-	// sdk = sdk.
-	// 	WithExec([]string{"dotnet", "build", "--no-restore", solution})
-
-	// get reference to build output directory in container
+	sdk, solutionPath := restore(client, sdk, outputs)
+	// sdk = build(client, sdk, outputs, solutionPath)
+	runIntegrationTests(client, sdk, solutionPath)
 
 	output := sdk.
-		Directory(solution)
+		Directory(outputDirectory)
 
-	// output := client.
-	// 	Directory()
-
-	// write contents of container build/ directory to the host
 	_, export_error := output.
-		Export(ctx, solution)
+		Export(ctx, outputDirectory)
 
 	if export_error != nil {
 		return export_error
@@ -109,36 +101,118 @@ func build(ctx context.Context, client *dagger.Client) error {
 	return nil
 }
 
-func copyProjects(destinationDirectory *dagger.Directory) (*dagger.Directory, error) {
-	// copy solution
-	// projects_dir.WithFile(solution, )
+// copies solution and csprojs and then restores, so you have a fixed cache even if you change the src
+func restore(client *dagger.Client, sdk *dagger.Container, outputs *dagger.Directory) (*dagger.Container, string) {
 
-	files, err := find_files(".", ".csproj")
+	host := client.Host()
 
-	if err != nil {
-		return nil, err
+	outputs, solutionPath := copySolution(host, outputs)
+	outputs = copyProjects(host, outputs)
+
+	sdk = sdk.
+		WithMountedDirectory("/build", outputs).
+		WithWorkdir("build")
+	//
+	// sdk = sdk.
+	// 	WithExec([]string{"ls"})
+	//
+	// sdk = sdk.
+	// 	WithExec([]string{"dotnet", "restore", solutionPath})
+
+	return sdk, solutionPath
+}
+
+// builds
+func build(client *dagger.Client, sdk *dagger.Container, outputs *dagger.Directory, solutionPath string) *dagger.Container {
+	host := client.Host()
+
+	// recopy whole host but nuget should be cached
+	sdk = sdk.
+		WithMountedDirectory("/build/src", host.Directory("src")).
+		WithWorkdir("/build")
+
+	sdk = sdk.
+		WithExec([]string{"ls"})
+
+	sdk = sdk.
+		WithExec([]string{"dotnet", "build", "--no-restore", solutionPath})
+
+	return sdk
+}
+
+// runs unit tests
+func runUnitTests() {
+
+}
+
+// runs integration tests
+func runIntegrationTests(client *dagger.Client, sdk *dagger.Container, solutionPath string) {
+
+	runCompose(client)
+
+	sdk = client.
+		Container().
+		From(dotnetSdkDockerImage)
+
+		// TODO: check if we need to actively log stdout / stderr?
+	sdk.
+		WithExec([]string{"dotnet", "test", "--no-restore", "--no-build", solutionPath})
+}
+
+// https://discord.com/channels/707636530424053791/1037455051821682718/1066033684278423633
+func runCompose(client *dagger.Client) {
+	// WithEnvVariable("DOCKER_DEFAULT_PLATFORM", "linux/amd64").
+	// WithUnixSocket("/var/run/docker.sock", docker_host).
+	// .WithEnvVariable("CACHEBUSTER", datetime.now().strftime("%m/%d/%Y, %H:%M:%S"))
+	host := client.Host()
+
+	compose := client.Container(). // platform ??
+					From("docker:dind")
+
+	copyFileFromHost(host, compose.Directory("."), ".", "docker-compose.yml")
+
+	compose.WithExec([]string{"dockere", "compose", "up", "-d"})
+}
+
+// dockerize
+func dockerize() {
+	// https: //docs.dagger.io/205271/replace-dockerfile
+}
+
+func copySolution(host *dagger.Host, destinationDirectory *dagger.Directory) (*dagger.Directory, string) {
+	destinationDirectory, solutions := findAndCopyFromHost(host, destinationDirectory, ".", ".sln")
+	destinationDirectory = copyFileFromHost(host, destinationDirectory, ".", path.Join("src", "global.json"))
+	destinationDirectory = copyFileFromHost(host, destinationDirectory, ".", path.Join("src", "Directory.Build.props"))
+
+	return destinationDirectory, solutions[0]
+}
+
+func copyProjects(host *dagger.Host, destinationDirectory *dagger.Directory) *dagger.Directory {
+	destinationDirectory, _ = findAndCopyFromHost(host, destinationDirectory, ".", ".csproj")
+
+	return destinationDirectory
+}
+
+func findAndCopyFromHost(host *dagger.Host, destinationDirectory *dagger.Directory, root string, ext string) (*dagger.Directory, []string) {
+	files, err := findFiles(root, ext)
+
+	if err != nil || len(files) == 0 {
+		panic(fmt.Sprintf("cannot find with %s", ext))
 	}
 
 	for _, file := range files {
-		content, err := os.ReadFile(file)
-
-		if err != nil {
-			panic(fmt.Sprintf("cannot read %s", file))
-		}
-
-		log_info("copying %s project", file)
-
-		destinationDirectory = destinationDirectory.WithNewFile(file, string(content))
+		destinationDirectory = copyFileFromHost(host, destinationDirectory, root, file)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return destinationDirectory, nil
+	return destinationDirectory, files
 }
 
-func find_files(root string, ext string) ([]string, error) {
+func findFiles(root string, ext string) ([]string, error) {
+
+	// files, err := host.Directory(root, dagger.HostDirectoryOpts{
+	// 	Include: []string{ext},
+	// }).Entries(ctx)
+
 	var files []string
 
 	err := filepath.WalkDir(root, func(path string, dir fs.DirEntry, err error) error {
@@ -158,24 +232,8 @@ func find_files(root string, ext string) ([]string, error) {
 	return files, nil
 }
 
-func log_error(message string, args ...any) {
-	log(color.New(color.FgBlue), message, args)
-}
+func copyFileFromHost(host *dagger.Host, destinationDirectory *dagger.Directory, root string, path string) *dagger.Directory {
+	log.Printf("copying %s", path)
 
-func log_info(message string, args ...any) {
-	log(color.New(color.FgBlue), message, args)
-}
-
-func log(logger *color.Color, message string, args ...any) {
-	// fmt.Println(message)
-	// fmt.Println(len(args))
-	// fmt.Println(args[0])
-
-	if args != nil && len(args) > 0 {
-		logger.Printf(message, args)
-	} else {
-		logger.Print(message)
-	}
-
-	logger.Println()
+	return destinationDirectory.WithFile(path, host.Directory(root).File(path))
 }

@@ -29,9 +29,9 @@ func createLogger() *zap.Logger {
 }
 
 var logger = createLogger()
-
 var log = logger.Sugar()
 var ctx = context.Background()
+var now = time.Now()
 
 func main() {
 	defer logger.Sync()
@@ -69,6 +69,10 @@ func main() {
 		{
 			task_error = ci(client, isDebug)
 		}
+	case "cd":
+		{
+			task_error = cd(client, isDebug)
+		}
 	default:
 		{
 			log.Infof("unrecognized task")
@@ -84,7 +88,6 @@ const dotnetSdkDockerImage = "mcr.microsoft.com/dotnet/sdk:7.0"
 const outputDirectory = "build/"
 
 func ci(client *dagger.Client, isDebug bool) error {
-	now := time.Now()
 
 	log.Infof("CI")
 
@@ -109,7 +112,42 @@ func ci(client *dagger.Client, isDebug bool) error {
 	sdk = runUnitTests(client, sdk, solutionPath)
 	sdk = runIntegrationTests(client, sdk, solutionPath)
 
-	captureStdout(sdk)
+	output := sdk.
+		Directory(outputDirectory)
+
+	_, export_error := output.
+		Export(ctx, outputDirectory)
+
+	if export_error != nil {
+		return export_error
+	}
+
+	return nil
+}
+
+func cd(client *dagger.Client, isDebug bool) error {
+	now := time.Now()
+
+	log.Infof("CD")
+
+	sdk := client.
+		Container().
+		From(dotnetSdkDockerImage)
+
+	if isDebug {
+		log.Infof("debug mode")
+
+		sdk = sdk.
+			WithEnvVariable("BURST_CACHE", now.String())
+	}
+
+	sdk = sdk.
+		WithEnvVariable("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "true").
+		WithEnvVariable("DOTNET_RUNNING_IN_CONTAINER", "true").
+		WithEnvVariable("NUGET_XMLDOC_MODE", "skip")
+
+	sdk, solutionPath := restore(client, sdk)
+	sdk = build(client, sdk, solutionPath)
 
 	output := sdk.
 		Directory(outputDirectory)
@@ -131,6 +169,8 @@ func restore(client *dagger.Client, sdk *dagger.Container) (*dagger.Container, s
 	host := client.
 		Host()
 
+	nugetCache := client.CacheVolume("nuget")
+
 	// solutionPath := "src/Template-Solution.sln"
 	sdk, solutionPath := copySolution(host, sdk, "/build")
 	sdk = copyProjects(host, sdk, "/build")
@@ -139,6 +179,7 @@ func restore(client *dagger.Client, sdk *dagger.Container) (*dagger.Container, s
 		WithWorkdir("/build")
 
 	sdk = sdk.
+		WithMountedCache("/root/.nuget", nugetCache).
 		WithExec([]string{"dotnet", "restore", solutionPath})
 
 	captureStdout(sdk)
@@ -230,6 +271,7 @@ func prepareCompose(client *dagger.Client) *dagger.Container {
 
 func startCompose(compose *dagger.Container) {
 	compose = compose.
+		WithEnvVariable("BURST_CACHE", now.String()).
 		WithExec([]string{"docker", "compose", "up", "-d"})
 
 	captureStdout(compose)
@@ -237,6 +279,7 @@ func startCompose(compose *dagger.Container) {
 
 func stopCompose(compose *dagger.Container) {
 	compose = compose.
+		WithEnvVariable("BURST_CACHE", now.String()).
 		WithExec([]string{"docker", "compose", "down"})
 
 	captureStdout(compose)

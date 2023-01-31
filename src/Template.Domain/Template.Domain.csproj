@@ -10,4 +10,8 @@
       <ProjectReference Include="..\Template.Common\Template.Common.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="FluentAssertions" Version="6.9.0" />
+    </ItemGroup>
+
 </Project>

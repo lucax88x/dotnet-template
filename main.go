@@ -88,12 +88,6 @@ func ci(client *dagger.Client, isDebug bool) error {
 
 	log.Infof("CI")
 
-	// outputs := client.
-	// 	Directory().
-	// 	WithoutDirectory("node_modules").
-	// 	WithoutDirectory("bin").
-	// 	WithoutDirectory("obj")
-
 	sdk := client.
 		Container().
 		From(dotnetSdkDockerImage)
@@ -160,11 +154,11 @@ func build(client *dagger.Client, sdk *dagger.Container, solutionPath string) *d
 		Host()
 
 	sdk = sdk.
-		WithMountedDirectory("/build/src", host.Directory("src")).
+		WithMountedDirectory("/build/src", host.Directory("src", withIgnored())).
 		WithWorkdir("/build").
 		WithExec([]string{"ls", "/root/.nuget/packages"}).
-		WithExec([]string{"ls", "/root/.nuget/packages/xunit.analyzers/1.0.0"}).
-		WithExec([]string{"dotnet nuget locals global-packages -l"}).
+		WithExec([]string{"ls", "/build/src/Template.Domain/obj"}).
+		// WithExec([]string{"dotnet", "clean", solutionPath}).
 		WithExec([]string{"dotnet", "build", "--no-restore", solutionPath})
 
 	captureStdout(sdk)
@@ -216,7 +210,7 @@ func prepareCompose(client *dagger.Client) *dagger.Container {
 		UnixSocket("/var/run/docker.sock")
 
 	return compose.
-		WithMountedFile("/tests/docker-compose.yml", host.Directory(".").File("docker-compose.yml")).
+		WithMountedFile("/tests/docker-compose.yml", host.Directory(".", withIgnored()).File("docker-compose.yml")).
 		WithWorkdir("/tests").
 		WithUnixSocket("/var/run/docker.sock", socket)
 }
@@ -241,7 +235,7 @@ func dockerize() {
 }
 
 func mountSolution(host *dagger.Host, container *dagger.Container, containerPath string) (*dagger.Container, string) {
-	sourceDirectory := host.Directory(".")
+	sourceDirectory := host.Directory(".", withIgnored())
 
 	container, solutions := findAndMountFromHost(sourceDirectory, container, containerPath, ".", ".sln")
 	container = mountFileFromHost(sourceDirectory, container, containerPath, path.Join("src", "global.json"))
@@ -251,7 +245,7 @@ func mountSolution(host *dagger.Host, container *dagger.Container, containerPath
 }
 
 func mountProjects(host *dagger.Host, container *dagger.Container, containerPath string) *dagger.Container {
-	sourceDirectory := host.Directory(".")
+	sourceDirectory := host.Directory(".", withIgnored())
 
 	container, _ = findAndMountFromHost(sourceDirectory, container, containerPath, ".", ".csproj")
 
@@ -309,4 +303,10 @@ func captureStdout(container *dagger.Container) {
 	}
 
 	log.Infof("%s", stdout)
+}
+
+func withIgnored() dagger.HostDirectoryOpts {
+	return dagger.HostDirectoryOpts{
+		Exclude: []string{"**/bin", "**/obj", "**/node_modules", "**/.git", "**/.idea", "**/.vscode", "**/.vs"},
+	}
 }

@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{45A273
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Template.Common", "Template.Common\Template.Common.csproj", "{6F5D6777-43A2-45CD-870F-71C7E159AAE2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Template.Domain.Tests", "Template.Domain.Tests\Template.Domain.Tests.csproj", "{22F86199-EC7A-4F1B-B894-0424D5730A37}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,10 +35,15 @@ Global
 		{6F5D6777-43A2-45CD-870F-71C7E159AAE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F5D6777-43A2-45CD-870F-71C7E159AAE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6F5D6777-43A2-45CD-870F-71C7E159AAE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22F86199-EC7A-4F1B-B894-0424D5730A37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22F86199-EC7A-4F1B-B894-0424D5730A37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22F86199-EC7A-4F1B-B894-0424D5730A37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22F86199-EC7A-4F1B-B894-0424D5730A37}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{5BC2769D-2AE1-4A81-8862-F18511618394} = {C71F0E08-0273-436E-9DF6-E3B445859615}
 		{695A75DF-D603-4983-8516-60FD4174A23B} = {0A49419C-8B6B-41DC-8212-2954BC3E2FA7}
 		{6F5D6777-43A2-45CD-870F-71C7E159AAE2} = {45A27323-ECB4-4EED-B2AE-29FA487CE12E}
+		{22F86199-EC7A-4F1B-B894-0424D5730A37} = {695A75DF-D603-4983-8516-60FD4174A23B}
 	EndGlobalSection
 EndGlobal

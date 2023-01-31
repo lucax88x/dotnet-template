@@ -102,7 +102,7 @@ func ci(client *dagger.Client, isDebug bool) error {
 	sdk = sdk.
 		WithEnvVariable("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "true").
 		WithEnvVariable("DOTNET_RUNNING_IN_CONTAINER", "true").
-		WithEnvVariable("NUGET_XMLDOC_MODE", "none") // TODO: should be skip
+		WithEnvVariable("NUGET_XMLDOC_MODE", "skip")
 
 	sdk, solutionPath := restore(client, sdk)
 	sdk = build(client, sdk, solutionPath)
@@ -132,8 +132,8 @@ func restore(client *dagger.Client, sdk *dagger.Container) (*dagger.Container, s
 		Host()
 
 	// solutionPath := "src/Template-Solution.sln"
-	sdk, solutionPath := mountSolution(host, sdk, "/build")
-	sdk = mountProjects(host, sdk, "/build")
+	sdk, solutionPath := copySolution(host, sdk, "/build")
+	sdk = copyProjects(host, sdk, "/build")
 
 	sdk = sdk.
 		WithWorkdir("/build")
@@ -154,11 +154,8 @@ func build(client *dagger.Client, sdk *dagger.Container, solutionPath string) *d
 		Host()
 
 	sdk = sdk.
-		WithMountedDirectory("/build/src", host.Directory("src", withIgnored())).
+		WithDirectory("/build/src", host.Directory("src", withIgnored())).
 		WithWorkdir("/build").
-		WithExec([]string{"ls", "/root/.nuget/packages"}).
-		WithExec([]string{"ls", "/build/src/Template.Domain/obj"}).
-		// WithExec([]string{"dotnet", "clean", solutionPath}).
 		WithExec([]string{"dotnet", "build", "--no-restore", solutionPath})
 
 	captureStdout(sdk)
@@ -171,7 +168,16 @@ func runUnitTests(client *dagger.Client, sdk *dagger.Container, solutionPath str
 	log.Infof("RUN UNIT TESTS")
 
 	sdk = sdk.
-		WithExec([]string{"dotnet", "test", "--no-restore", "--no-build", solutionPath})
+		WithExec([]string{"dotnet",
+			"test",
+			"--filter", "Category!=Integration",
+			"--no-restore",
+			"--no-build",
+			solutionPath})
+	// --logger trx \
+	// --logger "console;verbosity=quiet" \
+	// --verbosity normal \
+	// --no-build --no-restore
 
 	captureStdout(sdk)
 
@@ -192,7 +198,14 @@ func runIntegrationTests(client *dagger.Client, sdk *dagger.Container, solutionP
 	// 	WithWorkdir("/src").
 
 	sdk = sdk.
-		WithExec([]string{"dotnet", "test", "--no-restore", "--no-build", solutionPath})
+		WithExec([]string{"dotnet",
+			"test",
+			"--filter", "Category=Integration",
+			"--no-restore",
+			"--no-build",
+			solutionPath})
+
+	captureStdout(sdk)
 
 	stopCompose(compose)
 
@@ -210,7 +223,7 @@ func prepareCompose(client *dagger.Client) *dagger.Container {
 		UnixSocket("/var/run/docker.sock")
 
 	return compose.
-		WithMountedFile("/tests/docker-compose.yml", host.Directory(".", withIgnored()).File("docker-compose.yml")).
+		WithFile("/tests/docker-compose.yml", host.Directory(".", withIgnored()).File("docker-compose.yml")).
 		WithWorkdir("/tests").
 		WithUnixSocket("/var/run/docker.sock", socket)
 }
@@ -224,7 +237,7 @@ func startCompose(compose *dagger.Container) {
 
 func stopCompose(compose *dagger.Container) {
 	compose = compose.
-		WithExec([]string{"docker", "compose", "down", "-d"})
+		WithExec([]string{"docker", "compose", "down"})
 
 	captureStdout(compose)
 }
@@ -234,25 +247,25 @@ func dockerize() {
 	// https: //docs.dagger.io/205271/replace-dockerfile
 }
 
-func mountSolution(host *dagger.Host, container *dagger.Container, containerPath string) (*dagger.Container, string) {
+func copySolution(host *dagger.Host, container *dagger.Container, containerPath string) (*dagger.Container, string) {
 	sourceDirectory := host.Directory(".", withIgnored())
 
-	container, solutions := findAndMountFromHost(sourceDirectory, container, containerPath, ".", ".sln")
-	container = mountFileFromHost(sourceDirectory, container, containerPath, path.Join("src", "global.json"))
-	container = mountFileFromHost(sourceDirectory, container, containerPath, path.Join("src", "Directory.Build.props"))
+	container, solutions := findAndCopyFromHost(sourceDirectory, container, containerPath, ".", ".sln")
+	container = copyFileFromHost(sourceDirectory, container, containerPath, path.Join("src", "global.json"))
+	container = copyFileFromHost(sourceDirectory, container, containerPath, path.Join("src", "Directory.Build.props"))
 
 	return container, solutions[0]
 }
 
-func mountProjects(host *dagger.Host, container *dagger.Container, containerPath string) *dagger.Container {
+func copyProjects(host *dagger.Host, container *dagger.Container, containerPath string) *dagger.Container {
 	sourceDirectory := host.Directory(".", withIgnored())
 
-	container, _ = findAndMountFromHost(sourceDirectory, container, containerPath, ".", ".csproj")
+	container, _ = findAndCopyFromHost(sourceDirectory, container, containerPath, ".", ".csproj")
 
 	return container
 }
 
-func findAndMountFromHost(sourceDirectory *dagger.Directory, container *dagger.Container, containerPath string, sourceRoot string, ext string) (*dagger.Container, []string) {
+func findAndCopyFromHost(sourceDirectory *dagger.Directory, container *dagger.Container, containerPath string, sourceRoot string, ext string) (*dagger.Container, []string) {
 	files, err := findFiles(sourceRoot, ext)
 
 	if err != nil || len(files) == 0 {
@@ -260,7 +273,7 @@ func findAndMountFromHost(sourceDirectory *dagger.Directory, container *dagger.C
 	}
 
 	for _, file := range files {
-		container = mountFileFromHost(sourceDirectory, container, containerPath, file)
+		container = copyFileFromHost(sourceDirectory, container, containerPath, file)
 	}
 
 	return container, files
@@ -286,13 +299,13 @@ func findFiles(root string, ext string) ([]string, error) {
 	return files, nil
 }
 
-func mountFileFromHost(sourceDirectory *dagger.Directory, container *dagger.Container, root string, path string) *dagger.Container {
+func copyFileFromHost(sourceDirectory *dagger.Directory, container *dagger.Container, root string, path string) *dagger.Container {
 	containerPath := filepath.Join(root, path)
 
 	log.Infof("copying %s to %s", path, containerPath)
 
 	return container.
-		WithMountedFile(containerPath, sourceDirectory.File(path))
+		WithFile(containerPath, sourceDirectory.File(path))
 }
 
 func captureStdout(container *dagger.Container) {

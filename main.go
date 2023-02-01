@@ -58,7 +58,7 @@ func main() {
 	client, client_error := dagger.Connect(ctx, dagger.WithLogOutput(os.Stdout))
 
 	if client_error != nil || client == nil {
-		log.Fatalf(fmt.Sprintf("cannot start dagger client! %e", client_error))
+		log.Fatalf(fmt.Sprintf("cannot start dagger client! %v", client_error))
 	}
 
 	defer client.
@@ -80,12 +80,11 @@ func main() {
 	}
 
 	if task_error != nil {
-		log.Fatalf("%e", task_error)
+		log.Fatalf("%v", task_error)
 	}
 }
 
 const dotnetSdkDockerImage = "mcr.microsoft.com/dotnet/sdk:7.0"
-const outputDirectory = "build/"
 
 func ci(client *dagger.Client, isDebug bool) error {
 
@@ -110,17 +109,8 @@ func ci(client *dagger.Client, isDebug bool) error {
 	sdk, solutionPath := restore(client, sdk)
 	sdk = build(client, sdk, solutionPath)
 	sdk = runUnitTests(client, sdk, solutionPath)
-	sdk = runIntegrationTests(client, sdk, solutionPath)
-
-	output := sdk.
-		Directory(outputDirectory)
-
-	_, export_error := output.
-		Export(ctx, outputDirectory)
-
-	if export_error != nil {
-		return export_error
-	}
+	// sdk = runIntegrationTests(client, sdk, solutionPath)
+	sdk = saveTestResults(client, sdk)
 
 	return nil
 }
@@ -149,16 +139,6 @@ func cd(client *dagger.Client, isDebug bool) error {
 	sdk, solutionPath := restore(client, sdk)
 	sdk = build(client, sdk, solutionPath)
 
-	output := sdk.
-		Directory(outputDirectory)
-
-	_, export_error := output.
-		Export(ctx, outputDirectory)
-
-	if export_error != nil {
-		return export_error
-	}
-
 	return nil
 }
 
@@ -182,7 +162,7 @@ func restore(client *dagger.Client, sdk *dagger.Container) (*dagger.Container, s
 		WithMountedCache("/root/.nuget", nugetCache).
 		WithExec([]string{"dotnet", "restore", solutionPath})
 
-	captureStdout(sdk)
+	captureAndLogStdout(sdk)
 
 	return sdk, solutionPath
 }
@@ -199,7 +179,7 @@ func build(client *dagger.Client, sdk *dagger.Container, solutionPath string) *d
 		WithWorkdir("/build").
 		WithExec([]string{"dotnet", "build", "--no-restore", solutionPath})
 
-	captureStdout(sdk)
+	captureAndLogStdout(sdk)
 
 	return sdk
 }
@@ -212,6 +192,7 @@ func runUnitTests(client *dagger.Client, sdk *dagger.Container, solutionPath str
 		WithExec([]string{"dotnet",
 			"test",
 			"--filter", "Category!=Integration",
+			"--logger", "trx",
 			"--no-restore",
 			"--no-build",
 			solutionPath})
@@ -220,7 +201,7 @@ func runUnitTests(client *dagger.Client, sdk *dagger.Container, solutionPath str
 	// --verbosity normal \
 	// --no-build --no-restore
 
-	captureStdout(sdk)
+	captureAndLogStdout(sdk)
 
 	return sdk
 }
@@ -232,23 +213,47 @@ func runIntegrationTests(client *dagger.Client, sdk *dagger.Container, solutionP
 	compose := prepareCompose(client)
 	startCompose(compose)
 
-	// sdk = client.
-	// 	Container().
-	// 	From(dotnetSdkDockerImage).
-	// 	WithMountedDirectory("/src", client.Host().Directory("./src")).
-	// 	WithWorkdir("/src").
-
 	sdk = sdk.
 		WithExec([]string{"dotnet",
 			"test",
 			"--filter", "Category=Integration",
+			"--logger", "trx",
 			"--no-restore",
 			"--no-build",
 			solutionPath})
 
-	captureStdout(sdk)
+	captureAndLogStdout(sdk)
 
 	stopCompose(compose)
+
+	return sdk
+}
+
+func saveTestResults(client *dagger.Client, sdk *dagger.Container) *dagger.Container {
+	sdk = sdk.
+		WithExec([]string{"find", ".", "-name", "TestResults"})
+
+	stdout, err := sdk.Stdout(ctx)
+
+	log.Infof(stdout)
+
+	if err != nil {
+		log.Fatalf("cannot find test results %v", err)
+	}
+
+	// TODO: need to get multiple lines from stdout!
+ 
+	testResultsDirectory := sdk.
+		Directory("./src/Template.Domain.Tests/TestResults")
+
+	_, exportError := testResultsDirectory.
+		Export(ctx, path.Join("./TestResults", "./src/Template.Domain.Tests/TestResults"))
+
+	if exportError != nil {
+		log.Fatalf("cannot export test results %v", exportError)
+	}
+
+	captureAndLogStdout(sdk)
 
 	return sdk
 }
@@ -274,7 +279,7 @@ func startCompose(compose *dagger.Container) {
 		WithEnvVariable("BURST_CACHE", now.String()).
 		WithExec([]string{"docker", "compose", "up", "-d"})
 
-	captureStdout(compose)
+	captureAndLogStdout(compose)
 }
 
 func stopCompose(compose *dagger.Container) {
@@ -282,12 +287,13 @@ func stopCompose(compose *dagger.Container) {
 		WithEnvVariable("BURST_CACHE", now.String()).
 		WithExec([]string{"docker", "compose", "down"})
 
-	captureStdout(compose)
+	captureAndLogStdout(compose)
 }
 
 // dockerize
 func dockerize() {
 	// https: //docs.dagger.io/205271/replace-dockerfile
+	// https://gist.github.com/gmlewis/536345ad27c6986e41ae8ff7f5c0f7ff
 }
 
 func copySolution(host *dagger.Host, container *dagger.Container, containerPath string) (*dagger.Container, string) {
@@ -309,7 +315,7 @@ func copyProjects(host *dagger.Host, container *dagger.Container, containerPath 
 }
 
 func findAndCopyFromHost(sourceDirectory *dagger.Directory, container *dagger.Container, containerPath string, sourceRoot string, ext string) (*dagger.Container, []string) {
-	files, err := findFiles(sourceRoot, ext)
+	files, err := findFilesFromHost(sourceRoot, ext)
 
 	if err != nil || len(files) == 0 {
 		log.Fatalf("cannot find with %s", ext)
@@ -322,7 +328,7 @@ func findAndCopyFromHost(sourceDirectory *dagger.Directory, container *dagger.Co
 	return container, files
 }
 
-func findFiles(root string, ext string) ([]string, error) {
+func findFilesFromHost(root string, ext string) ([]string, error) {
 	var files []string
 
 	err := filepath.WalkDir(root, func(path string, dir fs.DirEntry, err error) error {
@@ -351,7 +357,7 @@ func copyFileFromHost(sourceDirectory *dagger.Directory, container *dagger.Conta
 		WithFile(containerPath, sourceDirectory.File(path))
 }
 
-func captureStdout(container *dagger.Container) {
+func captureAndLogStdout(container *dagger.Container) {
 	stdout, err := container.Stdout(ctx)
 
 	if err != nil {
@@ -363,6 +369,6 @@ func captureStdout(container *dagger.Container) {
 
 func withIgnored() dagger.HostDirectoryOpts {
 	return dagger.HostDirectoryOpts{
-		Exclude: []string{"**/bin", "**/obj", "**/node_modules", "**/.git", "**/.idea", "**/.vscode", "**/.vs"},
+		Exclude: []string{"**/bin", "**/obj", "**/node_modules", "**/.git", "**/.idea", "**/.vscode", "**/.vs", "**/TestResults"},
 	}
 }

@@ -17,7 +17,7 @@ stages:
               version: '1.19.5'
 
           - bash: |
-              go run ci.go
+              go run main.go ci
             displayName: Build & Test
 
           - task: PublishTestResults@2

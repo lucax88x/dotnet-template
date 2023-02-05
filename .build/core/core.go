@@ -31,14 +31,14 @@ func Wrap(fn WrapFunc) {
 
 	defer func() {
 		if err := logger.Sync(); err != nil {
-			fmt.Printf("Error when flushing logger %e", err)
+			fmt.Printf("Error when flushing logger %w", err)
 		}
 	}()
 
 	client, clientError := dagger.Connect(ctx, dagger.WithLogOutput(os.Stdout))
 
 	if clientError != nil || client == nil {
-		log.Fatalf(fmt.Sprintf("cannot start dagger client! %v", clientError))
+		log.Fatalf(fmt.Sprintf("cannot start dagger client! %w", clientError))
 	}
 
 	defer client.
@@ -49,6 +49,6 @@ func Wrap(fn WrapFunc) {
 	taskError := fn(wrapContext)
 
 	if taskError != nil {
-		log.Fatalf("%v", taskError)
+		log.Fatal(taskError)
 	}
 }

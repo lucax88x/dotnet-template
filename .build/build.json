@@ -4,11 +4,13 @@
     "Runtime": "mcr.microsoft.com/dotnet/aspnet:7.0"
   },
   "Docker": {
-    "Registry": "cr.federico-paolillo.xyz",
+    "Registry": "ttl.sh",
     "Projects": [
       {
-        "Name": "template.domain",
-        "Path": "src/Template.Domain/Template.Domain.csproj"
+        "GitOps": "gittodo",
+        "Name": "template.run",
+        "Path": "src/Template.Run/Template.Run.csproj",
+        "Entrypoint": "Template.Run"
       }
     ]
   }

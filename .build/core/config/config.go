@@ -7,29 +7,32 @@ import (
 )
 
 type Config struct {
-	Debug  bool
-	Images struct {
+	Debug   bool
+	Version string
+	Images  struct {
 		Sdk     string
 		Runtime string
 	}
 	Docker struct {
 		Registry string
 		Projects []struct {
-			Name string
-			Path string
+			GitOps     string
+			Name       string
+			Path       string
+			Entrypoint string
 		}
 	}
 }
 
-
 func ReadConfig(log *zap.SugaredLogger) Config {
 	viper.SetConfigName("build")
 	viper.AddConfigPath(".")
+	viper.AddConfigPath(".build")
 
 	// pflag.String("task", "ci", "task to run")
 	// pflag.Bool("debug", false, "debug mode")
-	//
-	// pflag.Parse()
+
+	pflag.Parse()
 
 	err := viper.BindPFlags(pflag.CommandLine)
 	if err != nil {

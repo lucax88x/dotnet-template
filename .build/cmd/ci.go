@@ -8,10 +8,10 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(ciCmd)
+	rootCmd.AddCommand(continuosIntegrationCmd)
 }
 
-var ciCmd = &cobra.Command{
+var continuosIntegrationCmd = &cobra.Command{
 	Use:   "ci",
 	Short: "runs the CI task",
 	Long:  `CI stands for continuos-integration`,

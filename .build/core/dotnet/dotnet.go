@@ -1,6 +1,7 @@
 package dotnet
 
 import (
+	"fmt"
 	"io/fs"
 	"path"
 	"path/filepath"
@@ -31,17 +32,6 @@ func CreateSdkContainer(ctx core.WrapContext) *dagger.Container {
 		WithEnvVariable("NUGET_XMLDOC_MODE", "skip")
 }
 
-// func cd(client *dagger.Client, isDebug bool) error {
-//
-//		sdk := CreateSdkContainer(client, isDebug)
-//
-//		sdk, solutionPath := Restore(client, sdk)
-//		sdk = Build(client, sdk, solutionPath)
-//		Dockerize(client, sdk)
-//
-//		return nil
-//	}
-//
 // copies solution and csprojs and then restores, so you have a fixed cache for nuget even if you change the src
 func Restore(ctx core.WrapContext, sdk *dagger.Container) (*dagger.Container, string) {
 	ctx.Log.Infof("RESTORING")
@@ -140,7 +130,7 @@ func SaveTestResults(ctx core.WrapContext, sdk *dagger.Container) *dagger.Contai
 	ctx.Log.Infof(stdout)
 
 	if err != nil {
-		ctx.Log.Fatalf("cannot find test results %v", err)
+		ctx.Log.Fatalf("cannot find test results %w", err)
 	}
 
 	// TODO: need to get multiple lines from stdout!
@@ -202,7 +192,15 @@ func Dockerize(ctx core.WrapContext, sdk *dagger.Container) {
 		ctx.Log.Infof("Building %s", dockerProject.Name)
 
 		publishPath := path.Join("/publish", dockerProject.Name)
-		publishAddress := path.Join(ctx.Config.Docker.Registry, dockerProject.Name)
+
+		var publishAddress string
+		if len(ctx.Config.Docker.Registry) == 0 {
+			publishAddress = dockerProject.Name
+		} else {
+			publishAddress = path.Join(ctx.Config.Docker.Registry, dockerProject.Name)
+		}
+
+		publishAddress = fmt.Sprintf("%s:%s", publishAddress, ctx.Config.Version)
 
 		sdk = sdk.
 			WithExec([]string{
@@ -212,21 +210,77 @@ func Dockerize(ctx core.WrapContext, sdk *dagger.Container) {
 
 		captureAndLogStdout(ctx, sdk)
 
-		publishRef, err := ctx.Client.Container().
+		entrypointDirectory := "/app"
+		runtime := ctx.
+			Client.
+			Container().
 			From(ctx.Config.Images.Runtime).
-			WithDirectory("/app", sdk.Directory(publishPath)).
+			WithDirectory(entrypointDirectory, sdk.Directory(publishPath)).
 			WithEnvVariable("ASPNETCORE_ENVIRONMENT", "PRODUCTION").
-			// WithEntrypoint("/app").
+			WithEntrypoint([]string{"ls", filepath.Join(entrypointDirectory, dockerProject.Entrypoint)})
+
+		captureAndLogStdout(ctx, runtime)
+
+		publishRef, err := runtime.
 			Publish(ctx.Context, publishAddress)
 
 		if err != nil {
-			ctx.Log.Fatalf("cannot publish %s with %s", publishAddress, err)
+			ctx.Log.Fatalf("cannot publish %s with %w", publishAddress, err)
 		}
 
 		ctx.Log.Infof("Successfully published %s image to %v - ref: %v", dockerProject.Name, publishAddress, publishRef)
 	}
-
 }
+
+// pushes new version on gitops
+// func PushNewVersion(ctx core.WrapContext, sdk *dagger.Container) {
+// 	for _, dockerProject := range ctx.Config.Docker.Projects {
+// 		readme, err := ctx.
+// 			Client.
+// 			Git(dockerProject.GitOps).
+// 			Branch("main").
+// 			Tree(
+// 				dagger.GitRefTreeOpts{
+// 					SSHAuthSocket: ctx.
+// 						Client.
+// 						Host().
+// 						UnixSocket(sshAgentPath),
+// 				},
+// 			).
+// 			File("README.md").
+// 			Contents(ctx)
+//
+// 		if err != nil {
+// 			ctx.Log.Fatalf("cannot update git %s with %w", dockerProject.GitOps, err)
+// 		}
+// 	}
+// }
+
+// export default async (client: Client, repo: DirectoryID) => {
+//     
+//     let container = client.container()
+//         .from('alpine/git')
+//         .withMountedDirectory('/git', repo)
+//     
+//     const sshSocketPath = process.env.SSH_AUTH_SOCK
+//
+//     if (! sshSocketPath) {
+//         console.log('No SSH socket path was found, you may not have an ssh-agent running')
+//     } else {
+//         const sshSocket = await client.host().unixSocket(sshSocketPath).id()
+//         container = container
+//             .withUnixSocket('/default.ssh', sshSocket)
+//             .withEnvVariable('SSH_AUTH_SOCK', '/default.ssh')
+//     }
+//     
+//     return await container
+//         .withEntrypoint([])
+//         .withExec(['mkdir', '-p', '~/.ssh'])
+//         .withExec(['ash', '-c', 'ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts'])
+//         .withExec(['cat', '~/.ssh/known_hosts'])
+//         // .withExec(['git', 'push', '-u', 'origin'])
+//         .stdout()
+// }
 
 func copySolution(ctx core.WrapContext, host *dagger.Host, container *dagger.Container, containerPath string) (*dagger.Container, string) {
 	sourceDirectory := host.Directory(".", withIgnored())
@@ -250,7 +304,7 @@ func findAndCopyFromHost(ctx core.WrapContext, sourceDirectory *dagger.Directory
 	files, err := findFilesFromHost(sourceRoot, ext)
 
 	if err != nil || len(files) == 0 {
-		ctx.Log.Fatalf("cannot find with %s", ext)
+		ctx.Log.Fatalf("cannot find with %s with %w", ext, err)
 	}
 
 	for _, file := range files {
@@ -303,7 +357,7 @@ func captureAndLogStdout(ctx core.WrapContext, container *dagger.Container) {
 func captureAndLogStderr(ctx core.WrapContext, container *dagger.Container) {
 	exitCode, err := container.ExitCode(ctx.Context)
 	if err != nil {
-		ctx.Log.Infof("failed with exitCode %s and error %v", exitCode, err)
+		ctx.Log.Infof("failed with exitCode %s and error %w", exitCode, err)
 	}
 }
 

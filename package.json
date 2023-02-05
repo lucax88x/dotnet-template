@@ -17,7 +17,8 @@
     "docker:up": "docker compose -f docker-compose.yml up -d",
     "docker:down": "docker compose -f docker-compose.yml down",
     "docker:logs": "docker compose -f docker-compose.yml logs",
-    "docker:logs:watch": "docker compose -f docker-compose.yml logs -f -t"
+    "docker:logs:watch": "docker compose -f docker-compose.yml logs -f -t",
+    "dzor:build": "(rm dzor && cd .build && go build && ln -s .build/dzor ../dzor)"
   },
   "devDependencies": {
     "@swc/core": "^1.3.18",

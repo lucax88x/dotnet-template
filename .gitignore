@@ -43,3 +43,6 @@ node_modules/
 *.out
 go.work
 build
+
+dzor
+.build/dzor

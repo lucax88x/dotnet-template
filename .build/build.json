@@ -1,0 +1,15 @@
+{
+  "Images": {
+    "Sdk": "mcr.microsoft.com/dotnet/sdk:7.0",
+    "Runtime": "mcr.microsoft.com/dotnet/aspnet:7.0"
+  },
+  "Docker": {
+    "Registry": "cr.federico-paolillo.xyz",
+    "Projects": [
+      {
+        "Name": "template.domain",
+        "Path": "src/Template.Domain/Template.Domain.csproj"
+      }
+    ]
+  }
+}

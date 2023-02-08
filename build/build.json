@@ -5,9 +5,9 @@
   },
   "Docker": {
     "Registry": "ttl.sh",
+    "GitOps": "gittodo",
     "Projects": [
       {
-        "GitOps": "gittodo",
         "Name": "template.run",
         "Path": "src/Template.Run/Template.Run.csproj",
         "Entrypoint": "Template.Run"

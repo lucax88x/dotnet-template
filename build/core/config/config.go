@@ -1,22 +1,23 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
 type Config struct {
-	Debug   bool
-	Version string
-	Images  struct {
+	Debug  bool
+	Images struct {
 		Sdk     string
 		Runtime string
 	}
 	Docker struct {
 		Registry string
+		GitOps   string
 		Projects []struct {
-			GitOps     string
 			Name       string
 			Path       string
 			Entrypoint string
@@ -27,7 +28,7 @@ type Config struct {
 func ReadConfig(log *zap.SugaredLogger) Config {
 	viper.SetConfigName("build")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath(".build")
+	viper.AddConfigPath("build")
 
 	// pflag.String("task", "ci", "task to run")
 	// pflag.Bool("debug", false, "debug mode")
@@ -55,4 +56,18 @@ func ReadConfig(log *zap.SugaredLogger) Config {
 	log.Infof("parsed to %+v\n", config)
 
 	return config
+}
+
+func GetBuildId() string {
+	fmt.Print("there 1")
+  
+	buildId := viper.GetString("buildId")
+  
+	fmt.Print("there 2")
+
+	if buildId == "" {
+		panic("empty buildId")
+	}
+
+	return buildId
 }

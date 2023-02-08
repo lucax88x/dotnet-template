@@ -3,11 +3,13 @@ package dotnet
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"path"
 	"path/filepath"
 	"time"
 
 	"dzor/core"
+	"dzor/core/config"
 
 	"dagger.io/dagger"
 )
@@ -183,7 +185,7 @@ func stopCompose(ctx core.WrapContext, compose *dagger.Container) {
 }
 
 // Dockerize
-func Dockerize(ctx core.WrapContext, sdk *dagger.Container) {
+func Dockerize(ctx core.WrapContext, sdk *dagger.Container, imageTag string) {
 	// https: //docs.dagger.io/205271/replace-dockerfile
 	// https://gist.github.com/gmlewis/536345ad27c6986e41ae8ff7f5c0f7ff
 
@@ -200,7 +202,8 @@ func Dockerize(ctx core.WrapContext, sdk *dagger.Container) {
 			publishAddress = path.Join(ctx.Config.Docker.Registry, dockerProject.Name)
 		}
 
-		publishAddress = fmt.Sprintf("%s:%s", publishAddress, ctx.Config.Version)
+		// $imageTag = "v$(Get-Date -Format yyyy.MMdd).$(Build.BuildId)"
+		publishAddress = fmt.Sprintf("%s:%s", publishAddress, config.GetBuildId())
 
 		sdk = sdk.
 			WithExec([]string{
@@ -216,8 +219,7 @@ func Dockerize(ctx core.WrapContext, sdk *dagger.Container) {
 			Container().
 			From(ctx.Config.Images.Runtime).
 			WithDirectory(entrypointDirectory, sdk.Directory(publishPath)).
-			WithEnvVariable("ASPNETCORE_ENVIRONMENT", "PRODUCTION").
-			WithEntrypoint([]string{"ls", filepath.Join(entrypointDirectory, dockerProject.Entrypoint)})
+			WithEnvVariable("ASPNETCORE_ENVIRONMENT", "PRODUCTION")
 
 		captureAndLogStdout(ctx, runtime)
 
@@ -232,36 +234,52 @@ func Dockerize(ctx core.WrapContext, sdk *dagger.Container) {
 	}
 }
 
-// pushes new version on gitops
-// func PushNewVersion(ctx core.WrapContext, sdk *dagger.Container) {
-// 	for _, dockerProject := range ctx.Config.Docker.Projects {
-// 		readme, err := ctx.
-// 			Client.
-// 			Git(dockerProject.GitOps).
-// 			Branch("main").
-// 			Tree(
-// 				dagger.GitRefTreeOpts{
-// 					SSHAuthSocket: ctx.
-// 						Client.
-// 						Host().
-// 						UnixSocket(sshAgentPath),
-// 				},
-// 			).
-// 			File("README.md").
-// 			Contents(ctx)
-//
-// 		if err != nil {
-// 			ctx.Log.Fatalf("cannot update git %s with %w", dockerProject.GitOps, err)
-// 		}
-// 	}
-// }
+// https://gist.github.com/gmlewis/680621bc9ed2477e6cfa5832fcb7194e
+// pushes new version on gitops, this assumes a SINGLE gitops repository for now
+func PatchGitOps(ctx core.WrapContext, sdk *dagger.Container, imageTag string) {
+	sshAgentPath := os.Getenv("SSH_AUTH_SOCK")
+
+	socket := ctx.
+		Client.
+		Host().
+		UnixSocket(sshAgentPath)
+
+	gitOpsDirectory := ctx.
+		Client.
+		Git(ctx.Config.Docker.GitOps).
+		Branch("main").
+		Tree(
+			dagger.GitRefTreeOpts{
+				SSHAuthSocket: socket},
+		)
+
+	gitContainer := ctx.
+		Client.
+		Container().
+		From("alpine/git").
+		WithUnixSocket("/default.ssh", socket).
+		WithEnvVariable("SSH_AUTH_SOCK", "/default.ssh").
+		WithMountedDirectory("/git", gitOpsDirectory).
+		WithWorkdir("/git").
+		// WithExec([]string{"git", "config", "user.name", githubUser}).
+		// WithExec([]string{"git", "config", "user.email", githubEmail}).
+		// WithExec([]string{"git", "fetch"}).
+		WithExec([]string{"git", "add", "-A"}).
+		WithExec([]string{"git", "commit", "-m", "commit message todo"}).
+		WithExec([]string{"git", "pull", "--rebase"}).
+		WithExec([]string{"git", "push", "origin"}).
+		WithExec([]string{"git", "tag", imageTag}).
+		WithExec([]string{"git", "push", "origin", imageTag})
+
+	captureAndLogStderr(ctx, gitContainer)
+}
 
 // export default async (client: Client, repo: DirectoryID) => {
-//     
+//
 //     let container = client.container()
 //         .from('alpine/git')
 //         .withMountedDirectory('/git', repo)
-//     
+//
 //     const sshSocketPath = process.env.SSH_AUTH_SOCK
 //
 //     if (! sshSocketPath) {
@@ -272,7 +290,7 @@ func Dockerize(ctx core.WrapContext, sdk *dagger.Container) {
 //             .withUnixSocket('/default.ssh', sshSocket)
 //             .withEnvVariable('SSH_AUTH_SOCK', '/default.ssh')
 //     }
-//     
+//
 //     return await container
 //         .withEntrypoint([])
 //         .withExec(['mkdir', '-p', '~/.ssh'])

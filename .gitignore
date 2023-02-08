@@ -42,7 +42,6 @@ node_modules/
 *.test
 *.out
 go.work
-build
 
 dzor
 .build/dzor

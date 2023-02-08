@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"dzor/core/config"
 	"dzor/core/logger"
@@ -51,4 +52,9 @@ func Wrap(fn WrapFunc) {
 	if taskError != nil {
 		log.Fatal(taskError)
 	}
+}
+
+func GetImageTag() string {
+	return fmt.Sprintf("v%s:%s", time.Now().Format("yyyy.MMdd"), config.GetBuildId())
+
 }

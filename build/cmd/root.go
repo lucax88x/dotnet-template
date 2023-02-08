@@ -11,14 +11,13 @@ import (
 func init() {
 	rootCmd.PersistentFlags().Bool("debug", false, "Use debug mode")
 	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
-	viper.SetDefault("debug", false)
 }
 
 var rootCmd = &cobra.Command{
 	Use:   "dzor",
 	Short: "dzor is a builder CLI",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
+		cmd.Help()
 	},
 }
 

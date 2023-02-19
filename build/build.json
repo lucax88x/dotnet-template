@@ -5,7 +5,6 @@
   },
   "Docker": {
     "Registry": "ttl.sh",
-    "GitOps": "gittodo",
     "Projects": [
       {
         "Name": "template.run",
@@ -13,5 +12,12 @@
         "Entrypoint": "Template.Run"
       }
     ]
+  },
+  "GitOps": {
+    "UseLocalSsh": true,
+    "SshHost": "ssh.dev.azure.com",
+    "Url": "git@ssh.dev.azure.com:v3/lucatrazzi/dotnet-template-web-application-gitops/dotnet-template-web-application-gitops",
+    "Email": "lucax88x@hotmail.com",
+    "Name": "lucatrazzi"
   }
 }

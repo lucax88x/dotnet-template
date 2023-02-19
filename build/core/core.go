@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"dzor/core/config"
 	"dzor/core/logger"
@@ -32,14 +31,16 @@ func Wrap(fn WrapFunc) {
 
 	defer func() {
 		if err := logger.Sync(); err != nil {
-			fmt.Printf("Error when flushing logger %w", err)
+			fmt.Printf("Error when flushing logger %+v", err)
 		}
 	}()
+
+	log.Infof("connecting to dagger ...")
 
 	client, clientError := dagger.Connect(ctx, dagger.WithLogOutput(os.Stdout))
 
 	if clientError != nil || client == nil {
-		log.Fatalf(fmt.Sprintf("cannot start dagger client! %w", clientError))
+		log.Fatalf("cannot start dagger client! %+v", clientError)
 	}
 
 	defer client.
@@ -54,7 +55,28 @@ func Wrap(fn WrapFunc) {
 	}
 }
 
-func GetImageTag() string {
-	return fmt.Sprintf("v%s:%s", time.Now().Format("yyyy.MMdd"), config.GetBuildId())
+// this will capture stdout only, so if you get error from task it will fail,
+// if you need to capture error use the other one
+func CaptureAndLogStdout(ctx WrapContext, container *dagger.Container) {
+	stdout, err := container.Stdout(ctx.Context)
 
+	if err != nil {
+		ctx.Log.Fatal(err)
+	}
+
+	ctx.Log.Infof("%v", stdout)
+}
+
+// this will capture stderr, so it will NOT stop if your task fails
+func CaptureAndLogStderr(ctx WrapContext, container *dagger.Container) {
+	exitCode, err := container.ExitCode(ctx.Context)
+	if err != nil {
+		ctx.Log.Infof("failed with exitCode %v and error %+v", exitCode, err)
+	}
+}
+
+func WithIgnored() dagger.HostDirectoryOpts {
+	return dagger.HostDirectoryOpts{
+		Exclude: []string{"**/bin", "**/obj", "**/node_modules", "**/.git", "**/.idea", "**/.vscode", "**/.vs", "**/TestResults"},
+	}
 }

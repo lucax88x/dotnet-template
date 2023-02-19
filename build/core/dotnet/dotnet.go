@@ -3,13 +3,12 @@ package dotnet
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"time"
 
 	"dzor/core"
-	"dzor/core/config"
+	"dzor/core/docker"
 
 	"dagger.io/dagger"
 )
@@ -55,7 +54,7 @@ func Restore(ctx core.WrapContext, sdk *dagger.Container) (*dagger.Container, st
 		WithMountedCache("/root/.nuget", nugetCache).
 		WithExec([]string{"dotnet", "restore", solutionPath})
 
-	captureAndLogStdout(ctx, sdk)
+	core.CaptureAndLogStdout(ctx, sdk)
 
 	return sdk, solutionPath
 }
@@ -69,11 +68,11 @@ func Build(ctx core.WrapContext, sdk *dagger.Container, solutionPath string) *da
 		Host()
 
 	sdk = sdk.
-		WithDirectory("/build/src", host.Directory("src", withIgnored())).
+		WithDirectory("/build/src", host.Directory("src", core.WithIgnored())).
 		WithWorkdir("/build").
 		WithExec([]string{"dotnet", "build", "--no-restore", solutionPath})
 
-	captureAndLogStdout(ctx, sdk)
+	core.CaptureAndLogStdout(ctx, sdk)
 
 	return sdk
 }
@@ -95,7 +94,7 @@ func RunUnitTests(ctx core.WrapContext, sdk *dagger.Container, solutionPath stri
 	// --verbosity normal \
 	// --no-build --no-restore
 
-	captureAndLogStderr(ctx, sdk)
+	core.CaptureAndLogStderr(ctx, sdk)
 
 	return sdk
 }
@@ -104,8 +103,8 @@ func RunUnitTests(ctx core.WrapContext, sdk *dagger.Container, solutionPath stri
 func RunIntegrationTests(ctx core.WrapContext, sdk *dagger.Container, solutionPath string) *dagger.Container {
 	ctx.Log.Infof("RUN INTEGRATION TESTS")
 
-	compose := prepareCompose(ctx.Client)
-	startCompose(ctx, compose)
+	compose := docker.PrepareCompose(ctx.Client)
+	docker.StartCompose(ctx, compose)
 
 	sdk = sdk.
 		WithExec([]string{"dotnet",
@@ -116,9 +115,9 @@ func RunIntegrationTests(ctx core.WrapContext, sdk *dagger.Container, solutionPa
 			"--no-build",
 			solutionPath})
 
-	captureAndLogStderr(ctx, sdk)
+	core.CaptureAndLogStderr(ctx, sdk)
 
-	stopCompose(ctx, compose)
+	docker.StopCompose(ctx, compose)
 
 	return sdk
 }
@@ -132,7 +131,7 @@ func SaveTestResults(ctx core.WrapContext, sdk *dagger.Container) *dagger.Contai
 	ctx.Log.Infof(stdout)
 
 	if err != nil {
-		ctx.Log.Fatalf("cannot find test results %w", err)
+		ctx.Log.Fatalf("cannot find test results %+v", err)
 	}
 
 	// TODO: need to get multiple lines from stdout!
@@ -144,44 +143,12 @@ func SaveTestResults(ctx core.WrapContext, sdk *dagger.Container) *dagger.Contai
 		Export(ctx.Context, path.Join("./TestResults", "./src/Template.Domain.Tests/TestResults"))
 
 	if exportError != nil {
-		ctx.Log.Fatalf("cannot export test results %v", exportError)
+		ctx.Log.Fatalf("cannot export test results %+v", exportError)
 	}
 
-	captureAndLogStdout(ctx, sdk)
+	core.CaptureAndLogStdout(ctx, sdk)
 
 	return sdk
-}
-
-func prepareCompose(client *dagger.Client) *dagger.Container {
-	host := client.Host()
-
-	compose := client.Container(). // platform ??
-					From("docker:dind")
-
-	socket := client.
-		Host().
-		UnixSocket("/var/run/docker.sock")
-
-	return compose.
-		WithFile("/tests/docker-compose.yml", host.Directory(".", withIgnored()).File("docker-compose.yml")).
-		WithWorkdir("/tests").
-		WithUnixSocket("/var/run/docker.sock", socket)
-}
-
-func startCompose(ctx core.WrapContext, compose *dagger.Container) {
-	compose = compose.
-		WithEnvVariable("BURST_CACHE", time.Now().String()).
-		WithExec([]string{"docker", "compose", "up", "-d"})
-
-	captureAndLogStdout(ctx, compose)
-}
-
-func stopCompose(ctx core.WrapContext, compose *dagger.Container) {
-	compose = compose.
-		WithEnvVariable("BURST_CACHE", time.Now().String()).
-		WithExec([]string{"docker", "compose", "down"})
-
-	captureAndLogStdout(ctx, compose)
 }
 
 // Dockerize
@@ -202,8 +169,7 @@ func Dockerize(ctx core.WrapContext, sdk *dagger.Container, imageTag string) {
 			publishAddress = path.Join(ctx.Config.Docker.Registry, dockerProject.Name)
 		}
 
-		// $imageTag = "v$(Get-Date -Format yyyy.MMdd).$(Build.BuildId)"
-		publishAddress = fmt.Sprintf("%s:%s", publishAddress, config.GetBuildId())
+		publishAddress = fmt.Sprintf("%s:%s", publishAddress, imageTag)
 
 		sdk = sdk.
 			WithExec([]string{
@@ -211,7 +177,7 @@ func Dockerize(ctx core.WrapContext, sdk *dagger.Container, imageTag string) {
 				"-c", "release",
 				"-o", publishPath})
 
-		captureAndLogStdout(ctx, sdk)
+		core.CaptureAndLogStdout(ctx, sdk)
 
 		entrypointDirectory := "/app"
 		runtime := ctx.
@@ -221,87 +187,21 @@ func Dockerize(ctx core.WrapContext, sdk *dagger.Container, imageTag string) {
 			WithDirectory(entrypointDirectory, sdk.Directory(publishPath)).
 			WithEnvVariable("ASPNETCORE_ENVIRONMENT", "PRODUCTION")
 
-		captureAndLogStdout(ctx, runtime)
+		core.CaptureAndLogStdout(ctx, runtime)
 
 		publishRef, err := runtime.
 			Publish(ctx.Context, publishAddress)
 
 		if err != nil {
-			ctx.Log.Fatalf("cannot publish %s with %w", publishAddress, err)
+			ctx.Log.Fatalf("cannot publish %s with %+v", publishAddress, err)
 		}
 
-		ctx.Log.Infof("Successfully published %s image to %v - ref: %v", dockerProject.Name, publishAddress, publishRef)
+		ctx.Log.Infof("Successfully published %s image to %s - ref: %s", dockerProject.Name, publishAddress, publishRef)
 	}
 }
 
-// https://gist.github.com/gmlewis/680621bc9ed2477e6cfa5832fcb7194e
-// pushes new version on gitops, this assumes a SINGLE gitops repository for now
-func PatchGitOps(ctx core.WrapContext, sdk *dagger.Container, imageTag string) {
-	sshAgentPath := os.Getenv("SSH_AUTH_SOCK")
-
-	socket := ctx.
-		Client.
-		Host().
-		UnixSocket(sshAgentPath)
-
-	gitOpsDirectory := ctx.
-		Client.
-		Git(ctx.Config.Docker.GitOps).
-		Branch("main").
-		Tree(
-			dagger.GitRefTreeOpts{
-				SSHAuthSocket: socket},
-		)
-
-	gitContainer := ctx.
-		Client.
-		Container().
-		From("alpine/git").
-		WithUnixSocket("/default.ssh", socket).
-		WithEnvVariable("SSH_AUTH_SOCK", "/default.ssh").
-		WithMountedDirectory("/git", gitOpsDirectory).
-		WithWorkdir("/git").
-		// WithExec([]string{"git", "config", "user.name", githubUser}).
-		// WithExec([]string{"git", "config", "user.email", githubEmail}).
-		// WithExec([]string{"git", "fetch"}).
-		WithExec([]string{"git", "add", "-A"}).
-		WithExec([]string{"git", "commit", "-m", "commit message todo"}).
-		WithExec([]string{"git", "pull", "--rebase"}).
-		WithExec([]string{"git", "push", "origin"}).
-		WithExec([]string{"git", "tag", imageTag}).
-		WithExec([]string{"git", "push", "origin", imageTag})
-
-	captureAndLogStderr(ctx, gitContainer)
-}
-
-// export default async (client: Client, repo: DirectoryID) => {
-//
-//     let container = client.container()
-//         .from('alpine/git')
-//         .withMountedDirectory('/git', repo)
-//
-//     const sshSocketPath = process.env.SSH_AUTH_SOCK
-//
-//     if (! sshSocketPath) {
-//         console.log('No SSH socket path was found, you may not have an ssh-agent running')
-//     } else {
-//         const sshSocket = await client.host().unixSocket(sshSocketPath).id()
-//         container = container
-//             .withUnixSocket('/default.ssh', sshSocket)
-//             .withEnvVariable('SSH_AUTH_SOCK', '/default.ssh')
-//     }
-//
-//     return await container
-//         .withEntrypoint([])
-//         .withExec(['mkdir', '-p', '~/.ssh'])
-//         .withExec(['ash', '-c', 'ssh-keyscan -t rsa gitlab.com >> ~/.ssh/known_hosts'])
-//         .withExec(['cat', '~/.ssh/known_hosts'])
-//         // .withExec(['git', 'push', '-u', 'origin'])
-//         .stdout()
-// }
-
 func copySolution(ctx core.WrapContext, host *dagger.Host, container *dagger.Container, containerPath string) (*dagger.Container, string) {
-	sourceDirectory := host.Directory(".", withIgnored())
+	sourceDirectory := host.Directory(".", core.WithIgnored())
 
 	container, solutions := findAndCopyFromHost(ctx, sourceDirectory, container, containerPath, ".", ".sln")
 	container = copyFileFromHost(sourceDirectory, container, containerPath, path.Join("src", "global.json"))
@@ -311,7 +211,7 @@ func copySolution(ctx core.WrapContext, host *dagger.Host, container *dagger.Con
 }
 
 func copyProjects(ctx core.WrapContext, host *dagger.Host, container *dagger.Container, containerPath string) *dagger.Container {
-	sourceDirectory := host.Directory(".", withIgnored())
+	sourceDirectory := host.Directory(".", core.WithIgnored())
 
 	container, _ = findAndCopyFromHost(ctx, sourceDirectory, container, containerPath, ".", ".csproj")
 
@@ -322,7 +222,7 @@ func findAndCopyFromHost(ctx core.WrapContext, sourceDirectory *dagger.Directory
 	files, err := findFilesFromHost(sourceRoot, ext)
 
 	if err != nil || len(files) == 0 {
-		ctx.Log.Fatalf("cannot find with %s with %w", ext, err)
+		ctx.Log.Fatalf("cannot find with %s with %+v", ext, err)
 	}
 
 	for _, file := range files {
@@ -357,30 +257,4 @@ func copyFileFromHost(sourceDirectory *dagger.Directory, container *dagger.Conta
 
 	return container.
 		WithFile(containerPath, sourceDirectory.File(path))
-}
-
-// this will capture stdout only, so if you get error from task it will fail,
-// if you need to capture error use the other one
-func captureAndLogStdout(ctx core.WrapContext, container *dagger.Container) {
-	stdout, err := container.Stdout(ctx.Context)
-
-	if err != nil {
-		ctx.Log.Fatal(err)
-	}
-
-	ctx.Log.Infof("%s", stdout)
-}
-
-// this will capture stderr, so it will NOT stop if your task fails
-func captureAndLogStderr(ctx core.WrapContext, container *dagger.Container) {
-	exitCode, err := container.ExitCode(ctx.Context)
-	if err != nil {
-		ctx.Log.Infof("failed with exitCode %s and error %w", exitCode, err)
-	}
-}
-
-func withIgnored() dagger.HostDirectoryOpts {
-	return dagger.HostDirectoryOpts{
-		Exclude: []string{"**/bin", "**/obj", "**/node_modules", "**/.git", "**/.idea", "**/.vscode", "**/.vs", "**/TestResults"},
-	}
 }

@@ -1,8 +1,6 @@
 package config
 
 import (
-	"fmt"
-
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -16,12 +14,18 @@ type Config struct {
 	}
 	Docker struct {
 		Registry string
-		GitOps   string
 		Projects []struct {
 			Name       string
 			Path       string
 			Entrypoint string
 		}
+	}
+	GitOps struct {
+		UseLocalSsh bool
+		SshHost     string
+		Url         string
+		Email       string
+		Name        string
 	}
 }
 
@@ -30,19 +34,14 @@ func ReadConfig(log *zap.SugaredLogger) Config {
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("build")
 
-	// pflag.String("task", "ci", "task to run")
-	// pflag.Bool("debug", false, "debug mode")
-
-	pflag.Parse()
-
 	err := viper.BindPFlags(pflag.CommandLine)
 	if err != nil {
-		log.Fatalf("cannot parse flags %e", err)
+		log.Fatalf("cannot parse flags %+v", err)
 	}
 
 	err = viper.ReadInConfig()
 	if err != nil {
-		log.Fatalf("cannot read config %e", err)
+		log.Fatalf("cannot read config %+v", err)
 	}
 
 	var config Config
@@ -50,24 +49,10 @@ func ReadConfig(log *zap.SugaredLogger) Config {
 	err = viper.Unmarshal(&config)
 
 	if err != nil {
-		log.Fatalf("cannot parse config %e", err)
+		log.Fatalf("cannot parse config %+v", err)
 	}
 
-	log.Infof("parsed to %+v\n", config)
+	log.Infof("parsed to %+v", config)
 
 	return config
-}
-
-func GetBuildId() string {
-	fmt.Print("there 1")
-  
-	buildId := viper.GetString("buildId")
-  
-	fmt.Print("there 2")
-
-	if buildId == "" {
-		panic("empty buildId")
-	}
-
-	return buildId
 }

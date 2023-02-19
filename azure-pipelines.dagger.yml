@@ -14,10 +14,13 @@ stages:
         steps:
           - task: GoTool@0
             inputs:
-              version: '1.19.5'
+              version: "1.19.5"
 
           - bash: |
-              go run main.go --task ci
+              (cd build && go build)
+
+          - bash: |
+              ./dzor cd --buildId 1236
             displayName: Build & Test
 
           - task: PublishTestResults@2

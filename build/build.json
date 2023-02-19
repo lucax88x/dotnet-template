@@ -14,7 +14,7 @@
     ]
   },
   "GitOps": {
-    "UseLocalSsh": true,
+    "UseLocalSsh": false,
     "SshHost": "ssh.dev.azure.com",
     "Url": "git@ssh.dev.azure.com:v3/lucatrazzi/dotnet-template-web-application-gitops/dotnet-template-web-application-gitops",
     "Email": "lucax88x@hotmail.com",

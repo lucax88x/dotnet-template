@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 
 	"dzor/core"
+	"dzor/core/azure"
 	"dzor/core/dotnet"
 	"dzor/core/git"
 )
@@ -18,7 +19,6 @@ func init() {
 	viper.BindPFlag("buildId", continuosDeliveryCmd.PersistentFlags().Lookup("buildId"))
 
 	continuosDeliveryCmd.PersistentFlags().String("commitMessage", "", "Commit message for gitops")
-	continuosDeliveryCmd.MarkPersistentFlagRequired("commitMessage")
 	viper.BindPFlag("commitMessage", continuosDeliveryCmd.PersistentFlags().Lookup("commitMessage"))
 
 	rootCmd.AddCommand(continuosDeliveryCmd)
@@ -27,7 +27,8 @@ func init() {
 var continuosDeliveryCmd = &cobra.Command{
 	Use:   "cd",
 	Short: "runs the CD task",
-	Long:  `CD stands for continuos-delivery`,
+	Long: `CD stands for continuos-delivery
+  it will take the commit message from azure-devops env variables, if you want to override use --commitMessage`,
 	Run: func(cmd *cobra.Command, args []string) {
 		core.Wrap(func(ctx core.WrapContext) error {
 
@@ -36,7 +37,7 @@ var continuosDeliveryCmd = &cobra.Command{
 			sdk = dotnet.Build(ctx, sdk, solutionPath)
 
 			imageTag := getImageTag()
-			commitMessage := getCommitMessage(imageTag)
+			commitMessage := getCommitMessage(ctx, imageTag)
 
 			ctx.Log.Infof("using image-tag %v", imageTag)
 
@@ -52,6 +53,18 @@ func getImageTag() string {
 	return fmt.Sprintf("v%s.%s", time.Now().Format("2006.0102"), viper.GetString("buildId"))
 }
 
-func getCommitMessage(imageTag string) string {
-	return fmt.Sprintf("patch: %s %s", viper.GetString("commitMessage"), imageTag)
+func getCommitMessage(ctx core.WrapContext, imageTag string) string {
+	commitMessage := azure.GetCommitMessage()
+
+	cliCommitMessage := viper.GetString("commitMessage")
+
+	if len(cliCommitMessage) > 0 {
+		commitMessage = cliCommitMessage
+	}
+
+	if len(commitMessage) == 0 {
+		ctx.Log.Fatal("empty commit message")
+	}
+
+	return fmt.Sprintf("patch: %s %s", commitMessage, imageTag)
 }
